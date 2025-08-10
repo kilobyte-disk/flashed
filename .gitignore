@@ -1,0 +1,6 @@
+# Ignore the contents of the build directory EXCEPT for the directory itself.
+build/*
+!build/.gitkeep
+!build/export.sh
+!build/playtest.sh
+

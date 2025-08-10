@@ -1,0 +1,12 @@
+# Example of a .hll file. (Helium List)
+foo|bar
+apple|banana
+# Comments must be on their own lines.
+hello|1
+this|value
+# Or lines can be left empty.
+
+key|pair
+
+# However, a comment NOT on it's own line is ILLEGAL.
+# The parser won't catch it, but the comment will ruin the data.
