@@ -45,10 +45,15 @@ struct HlCore {
 	int canvas_height;
 
 	Camera2D overlay_camera2d; /* Camera for GUI overlay */
+	
+	/* World cameras */
 	Camera2D camera2d;
 	Camera3D camera3d;
 
 	RenderTexture2D render_target;
+
+	/* render_target in the previous frame */
+	RenderTexture2D last_frame; 
 
 	Vector2 virtual_mouse; /* Mouse position in canvas space. */
 

@@ -172,6 +172,15 @@ void MAIN_SetupCore(struct HlCore *CORE)
 
 	CORE->camera2d = camera2d;
 
+	Camera3D camera3d;
+	camera3d.position = (Vector3) { 0.0f, 0.0f, 10.0f };
+	camera3d.target = (Vector3) { 0.0f, 0.0f, 0.0f };
+	camera3d.up = (Vector3) { 0.0f, 1.0f, 0.0f };
+	camera3d.fovy = 45.0f;
+	camera3d.projection = CAMERA_PERSPECTIVE;
+
+	CORE->camera3d = camera3d;
+
 	Camera2D overlay_camera2d = {
 		.target = center,
 		.offset = center,
@@ -435,6 +444,9 @@ int main()
 
 				
 		EndDrawing();
+
+		/* Store this frame for the next cycle */
+		CORE.last_frame = CORE.render_target;
 	}
 
 	/*

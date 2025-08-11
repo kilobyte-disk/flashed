@@ -205,16 +205,14 @@ struct HlDeck DATA_ReadHlDeck(char *path)
 
 	/* Allocate memory */
 	unsigned int file_len = GetDeckLen(file);
-	size_t array_size = sizeof(char *) * file_len;
+	size_t array_size = sizeof(struct HlDeckCard) * file_len;
 
-	char **frontptr = malloc(array_size);
-	char **backptr = malloc(array_size);
-	if (frontptr == NULL || backptr == NULL) {
+	struct HlDeckCard *cardsptr = malloc(array_size);
+	if (cardsptr == NULL) {
 		printf("[HlData]: FATAL: malloc fail\n");
 	}
 
-	hldeck.front = frontptr;
-	hldeck.back = backptr;
+	hldeck.cards = cardsptr;
 
 	hldeck.elements = 0;
 
@@ -274,18 +272,23 @@ struct HlDeck DATA_ReadHlDeck(char *path)
 		arg2[wc + 1] = '\0';
 
 		/* Allocate each buffer */
-		char *fa1 = malloc(sizeof(char) * len1);
-		char *fa2 = malloc(sizeof(char) * len2);
-		if (fa1 == NULL || fa2 == NULL) {
+		char *frontbuf = malloc(sizeof(arg1));
+		char *backbuf = malloc(sizeof(arg2));
+
+		if (frontbuf == NULL || backbuf == NULL) {
 			printf("[HlData]: FATAL: malloc fail\n");
 		}
 
-		hldeck.front[element_counter] = fa1;
-		hldeck.back[element_counter] = fa2;
+		struct HlDeckCard card;
+
+		card.front = frontbuf;
+		card.back = backbuf;
+
+		hldeck.cards[element_counter] = card;
 
 		/* Write to each char buffer */
-		strncpy(hldeck.front[element_counter], arg1, sizeof(arg1));
-		strncpy(hldeck.back[element_counter], arg2, sizeof(arg2));
+		strncpy(frontbuf, arg1, sizeof(arg1));
+		strncpy(backbuf, arg2, sizeof(arg2));
 		
 		/* Flush line buffer */
 		memset(line, 0, MAX_LINE_LENGTH);

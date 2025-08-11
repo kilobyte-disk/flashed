@@ -17,6 +17,11 @@
 
 struct Data {
 	struct HlDeck deck;
+
+	RenderTexture2D front;
+	RenderTexture2D back;
+
+	
 };
 
 struct Data FlashState;
@@ -65,6 +70,21 @@ int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
 {
 	/* Update values */
 
+
+	/* Card pre-render */
+
+	/* Render front texture */
+	BeginTextureMode(FlashState.front);
+	ClearBackground(RAYWHITE);
+
+	EndTextureMode();
+
+	/* Render back texture */
+	BeginTextureMode(FlashState.back);
+	ClearBackground(RAYWHITE);
+
+	EndTextureMode();
+
 	return 0;
 }
 
@@ -76,9 +96,26 @@ int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
  */
 int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 {
-	/* Render things */
+	
 	Color bgcolor = { 66, 72, 82, 255 };
 	ClearBackground(bgcolor);
 
+	/* 3D rendering */
+	BeginMode3D(CORE->camera3d);
+
+	Mesh m_cube = GenMeshCube(2.0f, 2.0f, 2.0f);
+	Model cube = LoadModelFromMesh(m_cube);
+
+	cube.materials[0].maps[MATERIAL_MAP_NORMAL].texture = FlashState.front.texture;
+
+	Vector3 center = { 0.0f, 0.0f, 0.0f };
+
+	DrawModel(cube, center, 1, GRAY);
+	
+	
+	EndMode3D();
+
+	/* 2D rendering */
+		
 	return 0;
 }

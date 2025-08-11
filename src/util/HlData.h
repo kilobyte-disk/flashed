@@ -12,11 +12,15 @@ struct HlData {
 	char data[MAX_HLDATA_LENGTH][2][MAX_ARG_LENGTH]; 
 };
 
+struct HlDeckCard {
+	char *front;
+	char *back;
+};
+
 struct HlDeck {
 	long int elements;
 
-	char **front;
-	char **back;
+	struct HlDeckCard *cards;
 };
 
 
