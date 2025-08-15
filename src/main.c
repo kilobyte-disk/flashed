@@ -161,6 +161,8 @@ void MAIN_SetupCore(struct HlCore *CORE)
 	/* Mouse position relative to virtual render target */
 	CORE->virtual_mouse = (Vector2) { 0.0f, 0.0f };
 
+	CORE->render_target = LoadRenderTexture(CORE->canvas_width, CORE->canvas_height);
+
 	Vector2 center = { CORE->canvas_width * 0.5f, CORE->canvas_height * 0.5f };
 
 	Camera2D camera2d = {
