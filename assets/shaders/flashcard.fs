@@ -1,6 +1,7 @@
 /*
 * alpha_discard.fs
 * Discards alpha when rendering textures with transparency.
+* Also flips the texture being rendered. (Necessary because OpenGL is upside down)
 */
 
 #version 330
