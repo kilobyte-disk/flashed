@@ -55,6 +55,12 @@ enum HlEasingStyle {
 	BOUNCE_OUT_IN,
 };
 
+/* For all functions,
+ * t = elapsed time
+ * b = start value
+ * c = change in value (end_value - start_value);
+ * d = duration (total time)
+ */
 
 extern float EASE_Linear(float t, float b, float c, float d);
 

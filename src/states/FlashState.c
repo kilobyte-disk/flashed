@@ -9,15 +9,18 @@
  */
 
 #include <stdio.h>
+#include <stdbool.h>
 #include "raylib.h"
 #include "raymath.h"
 
 #include "Helium.h"
 #include "GLOBALS.h"
 #include "HlData.h"
+#include "HlEase.h"
 
 struct Data {
 	struct HlDeck deck;
+	int card_index;
 
 	int card_width;
 	int card_height;
@@ -26,8 +29,11 @@ struct Data {
 	RenderTexture2D front;
 	RenderTexture2D back;
 
-	Model cube;
-	float cube_rot;
+	bool anim_playing;
+	bool view_front;
+	float ease_timer;
+	float card_rotation;
+	float cam_z;
 
 	Model q_front;
 	Model q_back;
@@ -35,7 +41,73 @@ struct Data {
 	Shader flashcard_shader;
 };
 
+
 struct Data FlashState;
+
+void PreRenderCard(struct HlCore *CORE, float delta_time)
+{
+	/* Get card data */
+	struct HlDeckCard card = FlashState.deck.cards[FlashState.card_index];
+
+	/* Pre-render card */
+
+	/* TODO: Fix the unoptimized flipping of the RenderTexture */
+
+	Rectangle tex_rec = { 0.0f, 0.0f, (float) FlashState.card_width, (float) FlashState.card_height };
+	Vector2 vec2_0 = { 0.0f, 0.0f };
+	Vector2 text_pos = { 10.0f, 350.0f };
+
+	/* Render front texture to inverted_temp */
+	BeginTextureMode(FlashState.temp_inverted);
+	ClearBackground(RAYWHITE);
+
+	DrawTextEx(
+		*CORE->GLOBALS->F_VT323,
+		card.front,
+		text_pos,
+		70,
+		0.0f,
+		BLACK
+	);
+	
+	EndTextureMode();
+
+	/* Render inverted_temp to front texture2d */
+	BeginTextureMode(FlashState.front);
+	ClearBackground(BLANK);
+
+	DrawTextureRec(FlashState.temp_inverted.texture, tex_rec, vec2_0, WHITE);
+
+	EndTextureMode();
+
+	/* Render back texture */
+	BeginTextureMode(FlashState.temp_inverted);
+	ClearBackground(LIGHTGRAY);
+
+	DrawTextEx(
+		*CORE->GLOBALS->F_VT323,
+		card.back,
+		text_pos,
+		70,
+		0.0f,
+		BLACK
+	);
+
+
+	EndTextureMode();
+
+	/* Render inverted_temp to back texture2d */
+	BeginTextureMode(FlashState.back);
+	ClearBackground(BLANK);
+
+	DrawTextureRec(FlashState.temp_inverted.texture, tex_rec, vec2_0, WHITE);
+
+	EndTextureMode();
+
+
+	FlashState.q_front.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = FlashState.front.texture;
+	FlashState.q_back.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = FlashState.back.texture;
+}
 
 
 /*
@@ -47,8 +119,14 @@ int FLASHSTATE_Init(struct HlCore *CORE, float delta_time)
 	printf("%s", "[FlashState]: Entering FLASHSTATE\n");
 
 	/* Init */
-	FlashState.cube_rot = 0.0f;
+	FlashState.view_front = true;
+	FlashState.anim_playing = false;
+	FlashState.ease_timer = 0.0f;
+	FlashState.card_rotation = 0.0f;
+	FlashState.card_index = 0;
 
+	FlashState.cam_z = 10.0f;
+	CORE->camera3d.position = (Vector3) { 0.0f, 0.0f, FlashState.cam_z };
 
 	/* Load flashcards */
 	int FILENAME_LIMIT = 100; /* TODO: make loading lib for this */
@@ -70,11 +148,6 @@ int FLASHSTATE_Init(struct HlCore *CORE, float delta_time)
 
 
 	/* Generate meshes */
-	Mesh m_cube = GenMeshCube(2.0f, 2.0f, 2.0f);
-	Model cube = LoadModelFromMesh(m_cube);
-
-	FlashState.cube = cube;
-
 	Mesh m_plane = GenMeshPlane(8.0f, 4.0f, 1, 1);
 
 	Model q_front = LoadModelFromMesh(m_plane);
@@ -113,56 +186,65 @@ int FLASHSTATE_DeInit(struct HlCore *CORE, float delta_time)
  * Update
  * NOTE: This runs BEFORE BeginDraw(); is called.
  */
+static float ease_duration = 1.0f;
+
 int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
 {
 	/* Update values */
-	FlashState.cube_rot += 0.1f;
 
-	if (FlashState.cube_rot >= 360.0f) {
-		FlashState.cube_rot = 0.0f;
+	if (IsKeyPressed(32) && !FlashState.anim_playing) {
+		FlashState.anim_playing = true;
+		FlashState.view_front = !FlashState.view_front;
+		FlashState.ease_timer = -delta_time;
 	}
 
-	/* Card pre-render */
-	/* TODO: Fix the unoptimized flipping of the RenderTexture */
+	if (FlashState.anim_playing) {
+		FlashState.ease_timer += delta_time;
 
-	Rectangle tex_rec = { 0.0f, 0.0f, (float) FlashState.card_width, (float) FlashState.card_height };
-	Vector2 vec2_0 = { 0.0f, 0.0f };
+		if (FlashState.ease_timer >= ease_duration) {
+			FlashState.ease_timer = ease_duration;
+			FlashState.anim_playing = false;
+		}
 
-	/* Render front texture to inverted_temp */
-	BeginTextureMode(FlashState.temp_inverted);
-	ClearBackground(RAYWHITE);
+		if (FlashState.view_front) {
+			FlashState.card_rotation = EASE_ElasticOut(
+							FlashState.ease_timer,
+							180.0f,
+							-180.0f,
+							ease_duration,
+							0.25f, /* amplitude */
+							ease_duration * 0.35 /* period */
+							);
 
-	DrawText("FRONT SIDE", 400, 350, 70, BLACK);
+			FlashState.cam_z = EASE_QuadOut(
+						FlashState.ease_timer,
+						9.2f,
+						0.8f,
+						ease_duration
+						);
+		} else {
+			FlashState.card_rotation = EASE_ElasticOut(
+							FlashState.ease_timer,
+							0.0f,
+							180.0f,
+							ease_duration,
+							0.25f, /* amplitude */
+							ease_duration * 0.35 /* period */
+							);
 
-	EndTextureMode();
+			FlashState.cam_z = EASE_QuadOut(
+						FlashState.ease_timer,
+						10.0f,
+						-0.8f,
+						ease_duration
+						);
+		}
 
-	/* Render inverted_temp to front texture2d */
-	BeginTextureMode(FlashState.front);
-	ClearBackground(RAYWHITE);
+	}
 
-	DrawTextureRec(FlashState.temp_inverted.texture, tex_rec, vec2_0, WHITE);
-
-	EndTextureMode();
-
-	/* Render back texture */
-	BeginTextureMode(FlashState.temp_inverted);
-	ClearBackground(RAYWHITE);
-
-	DrawText("BACK SIDE", 400, 350, 70, BLACK);
-
-	EndTextureMode();
-
-	/* Render inverted_temp to back texture2d */
-	BeginTextureMode(FlashState.back);
-	ClearBackground(RAYWHITE);
-
-	DrawTextureRec(FlashState.temp_inverted.texture, tex_rec, vec2_0, WHITE);
-
-	EndTextureMode();
-
-
-	FlashState.q_front.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = FlashState.front.texture;
-	FlashState.q_back.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = FlashState.back.texture;
+	CORE->camera3d.position = (Vector3) { 0.0f, 0.0f, FlashState.cam_z };
+		
+	PreRenderCard(CORE, delta_time);
 
 	return 0;
 }
@@ -184,11 +266,11 @@ int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 
 	Vector3 front = { 0.0f, 0.0f, -0.1f };
 	Vector3 back = { 0.0f, 0.0f, 0.1f };
-	Vector3 rotation_axis = { 0.0f, 1.0f, 0.0f };
+	Vector3 rotation_axis = { 1.0f, 0.0f, 0.0f };
 	Vector3 scale = { 1.0f, 1.0f, 1.0f };
 
-	DrawModelEx(FlashState.q_front, front, rotation_axis, FlashState.cube_rot, scale, WHITE);
-	DrawModelEx(FlashState.q_back, back, rotation_axis, FlashState.cube_rot + 180.0f, scale, WHITE);
+	DrawModelEx(FlashState.q_front, front, rotation_axis, FlashState.card_rotation, scale, WHITE);
+	DrawModelEx(FlashState.q_back, back, rotation_axis, FlashState.card_rotation + 180.0f, scale, WHITE);
 	
 	
 	EndMode3D();
