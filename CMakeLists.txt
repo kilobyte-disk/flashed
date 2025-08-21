@@ -30,7 +30,6 @@ add_executable(flashed
 	# Instance
 	src/instance/HlSprite.c
 	src/instance/HlAnimation.c
-	src/instance/HlDialog.c
 
 	# Util
 	src/util/HlEase.c
