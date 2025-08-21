@@ -18,9 +18,16 @@
 #include "HlData.h"
 #include "HlEase.h"
 
+enum CardAnim {
+	FRONT,
+	BACK,
+	MOVE_FORWARD,
+	MOVE_BACKWARD,
+};
+
 struct Data {
 	struct HlDeck deck;
-	int card_index;
+	long int card_index;
 
 	int card_width;
 	int card_height;
@@ -31,7 +38,11 @@ struct Data {
 
 	bool anim_playing;
 	bool view_front;
+	enum CardAnim anim;
+	float ease_duration;
 	float ease_timer;
+
+	float card_x_offset;
 	float card_rotation;
 	float cam_z;
 
@@ -44,7 +55,7 @@ struct Data {
 
 struct Data FlashState;
 
-void PreRenderCard(struct HlCore *CORE, float delta_time)
+static void PreRenderCard(struct HlCore *CORE, float delta_time)
 {
 	/* Get card data */
 	struct HlDeckCard card = FlashState.deck.cards[FlashState.card_index];
@@ -120,8 +131,11 @@ int FLASHSTATE_Init(struct HlCore *CORE, float delta_time)
 
 	/* Init */
 	FlashState.view_front = true;
+	FlashState.anim = FRONT;
 	FlashState.anim_playing = false;
+	FlashState.ease_duration = 1.0f;
 	FlashState.ease_timer = 0.0f;
+	FlashState.card_x_offset = 0.0f;
 	FlashState.card_rotation = 0.0f;
 	FlashState.card_index = 0;
 
@@ -182,64 +196,131 @@ int FLASHSTATE_DeInit(struct HlCore *CORE, float delta_time)
 
 
 
+
+
+static void PlayAnim(enum CardAnim anim, float duration, float delta_time)
+{
+	if (FlashState.anim_playing) {
+		return;
+	}
+
+	FlashState.anim_playing = true;
+	FlashState.ease_timer = -delta_time;
+	FlashState.ease_duration = duration;
+	FlashState.anim = anim;
+}
+
+static void AdvanceCards(int advance)
+{
+	FlashState.card_index += advance;
+
+	if (FlashState.card_index < 0) {
+		FlashState.card_index = (FlashState.deck.elements - 1);
+	}
+	
+	if (FlashState.card_index > (FlashState.deck.elements - 1)) {
+		FlashState.card_index = 0;
+	}
+}
+
 /*
  * Update
  * NOTE: This runs BEFORE BeginDraw(); is called.
  */
-static float ease_duration = 1.0f;
-
 int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
 {
 	/* Update values */
 
-	if (IsKeyPressed(32) && !FlashState.anim_playing) {
-		FlashState.anim_playing = true;
+	if ((IsKeyPressed(32) || IsKeyPressed(264) || IsKeyPressed(265)) && !FlashState.anim_playing) {
 		FlashState.view_front = !FlashState.view_front;
-		FlashState.ease_timer = -delta_time;
+
+		if (FlashState.view_front) {
+			PlayAnim(FRONT, 1.0f, delta_time);
+		} else {
+			PlayAnim(BACK, 1.0f, delta_time);
+		}
+	}
+
+	if (IsKeyPressed(263) && !FlashState.anim_playing) {
+		PlayAnim(MOVE_BACKWARD, 0.5f, delta_time);
+		AdvanceCards(-1);
+	}
+
+	if (IsKeyPressed(262) && !FlashState.anim_playing) {
+		PlayAnim(MOVE_FORWARD, 0.5f, delta_time);
+		AdvanceCards(1);
 	}
 
 	if (FlashState.anim_playing) {
 		FlashState.ease_timer += delta_time;
 
-		if (FlashState.ease_timer >= ease_duration) {
-			FlashState.ease_timer = ease_duration;
+		if (FlashState.ease_timer >= FlashState.ease_duration) {
+			FlashState.ease_timer = FlashState.ease_duration;
 			FlashState.anim_playing = false;
 		}
 
-		if (FlashState.view_front) {
+		switch (FlashState.anim) {
+		default:
+			break;
+		case FRONT:
+			/* Flip to front of card */
 			FlashState.card_rotation = EASE_ElasticOut(
 							FlashState.ease_timer,
 							180.0f,
 							-180.0f,
-							ease_duration,
+							FlashState.ease_duration,
 							0.25f, /* amplitude */
-							ease_duration * 0.35 /* period */
+							FlashState.ease_duration * 0.35 /* period */
 							);
 
 			FlashState.cam_z = EASE_QuadOut(
 						FlashState.ease_timer,
 						9.2f,
 						0.8f,
-						ease_duration
+						FlashState.ease_duration
 						);
-		} else {
+			break;
+		case BACK:
+			/* Flip to back of card */
 			FlashState.card_rotation = EASE_ElasticOut(
 							FlashState.ease_timer,
 							0.0f,
 							180.0f,
-							ease_duration,
+							FlashState.ease_duration,
 							0.25f, /* amplitude */
-							ease_duration * 0.35 /* period */
+							FlashState.ease_duration * 0.35 /* period */
 							);
 
 			FlashState.cam_z = EASE_QuadOut(
 						FlashState.ease_timer,
 						10.0f,
 						-0.8f,
-						ease_duration
+						FlashState.ease_duration
 						);
+			break;
+		case MOVE_FORWARD:	
+			/* Jerk card to the right */
+			FlashState.card_x_offset = EASE_ElasticOut(
+							FlashState.ease_timer,
+							2.0f,
+							-2.0f,
+							FlashState.ease_duration,
+							0.05f, /* amplitude */
+							FlashState.ease_duration * 0.5 /* period */
+							);
+			break;
+		case MOVE_BACKWARD:
+			/* Jerk card to the right */
+			FlashState.card_x_offset = EASE_ElasticOut(
+							FlashState.ease_timer,
+							-2.0f,
+							2.0f,
+							FlashState.ease_duration,
+							0.05f, /* amplitude */
+							FlashState.ease_duration * 0.5 /* period */
+							);		
+			break;
 		}
-
 	}
 
 	CORE->camera3d.position = (Vector3) { 0.0f, 0.0f, FlashState.cam_z };
@@ -264,8 +345,8 @@ int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 	/* 3D rendering */
 	BeginMode3D(CORE->camera3d);
 
-	Vector3 front = { 0.0f, 0.0f, -0.1f };
-	Vector3 back = { 0.0f, 0.0f, 0.1f };
+	Vector3 front = { FlashState.card_x_offset, 0.0f, -0.1f };
+	Vector3 back = { FlashState.card_x_offset, 0.0f, 0.1f };
 	Vector3 rotation_axis = { 1.0f, 0.0f, 0.0f };
 	Vector3 scale = { 1.0f, 1.0f, 1.0f };
 
@@ -276,6 +357,18 @@ int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 	EndMode3D();
 
 	/* 2D rendering */
+	Vector2 pos = { (CORE->canvas_width / 2) - 40.0f, CORE->canvas_height - 100.0f };
+
+	char counter[20];
+	sprintf(counter, "(%li/%li)", (FlashState.card_index + 1), FlashState.deck.elements);
+	DrawTextEx(
+		*CORE->GLOBALS->F_VT323,
+		counter,
+		pos,
+		40,
+		0.0f,
+		WHITE
+		);
 		
 	return 0;
 }
