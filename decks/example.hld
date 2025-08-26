@@ -1,0 +1,16 @@
+# An example .hdk (Helium Deck) file.
+
+# Comments begin with an #, empty lines are ignored as well.
+
+foo|bar
+apple|banana
+# Comments MUST be on their own lines!
+hello|1
+this|value
+# Or lines can be left empty.
+
+key|pair
+
+# However, a comment NOT on it's own line is ILLEGAL.
+# The parser won't catch it, but the comment will ruin the data.
+

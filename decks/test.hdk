@@ -1,0 +1,7 @@
+# Testing deck
+hello|world
+foo|bar
+This is a single sentence front|This is a single sentence back
+This is a paragraph of text. This paragraph aims to demonstrate the rendering ability of long strings of text. This paragraph is located on the front side of the card.|This is another paragraph of text. This is aiming to demonstrate the long rendering capability. This is the second paragraph. It is located on the back.
+4+4|8
+

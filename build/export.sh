@@ -10,6 +10,17 @@
 FOLDER_NAME="flashed-main"
 EXECUTABLE_NAME="flashed"
 
+# Functions
+safe_cpdir () {
+	if [ ! -d "$1" ]; then
+		echo "ERROR: Unable to locate ${1}"
+		exit
+	fi
+	
+	echo ${1}
+	cp -r ${1} "${2}/"
+}
+
 # Build the executable
 echo "Building executable..."
 cmake .. && make
@@ -29,22 +40,9 @@ fi
 echo "Copying directories..."
 
 # Copy directories
-SRC_ASSETSDIR="../assets"
-if [ ! -d "$SRC_ASSETSDIR" ]; then
-	echo "ERROR: Unable to locate ${SRC_ASSETSDIR}"
-	exit
-fi
-
-SRC_DATADIR="../data"
-if [ ! -d "$SRC_DATADIR" ]; then
-	echo "ERROR: Unable to locate ${SRC_DATADIR}"
-	exit
-fi
-
-echo "${SRC_ASSETSDIR}"
-cp -r $SRC_ASSETSDIR "${PKGDIR}/"
-echo "${SRC_DATADIR}"
-cp -r $SRC_DATADIR "${PKGDIR}/"
+safe_cpdir "../assets" $PKGDIR
+safe_cpdir "../data" $PKGDIR
+safe_cpdir "../decks" $PKGDIR
 
 # Move the executable file to the package directory
 echo "Moving executable..."

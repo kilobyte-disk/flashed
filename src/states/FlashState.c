@@ -23,6 +23,8 @@ enum CardAnim {
 	BACK,
 	MOVE_FORWARD,
 	MOVE_BACKWARD,
+	FLIP_FRONT_FORWARD,
+	FLIP_FRONT_BACKWARD,
 };
 
 struct Data {
@@ -146,7 +148,7 @@ int FLASHSTATE_Init(struct HlCore *CORE, float delta_time)
 	int FILENAME_LIMIT = 100; /* TODO: make loading lib for this */
 	char path[FILENAME_LIMIT];
 
-	sprintf(path, "./data/cards/%s", CORE->GLOBALS->CurrentDeck);
+	sprintf(path, "./decks/%s", CORE->GLOBALS->CurrentDeck);
 
 	printf("Loading deck %s\n", path);
 	
@@ -223,6 +225,73 @@ static void AdvanceCards(int advance)
 	}
 }
 
+static void FlipFrontCombo(enum CardAnim anim, float delta_time) {
+	FlashState.view_front = true;
+
+	PlayAnim(anim, 1.0f, delta_time);
+
+}
+
+
+static void EaseFront() {
+	/* Flip to front of card */
+	FlashState.card_rotation = EASE_ElasticOut(
+					FlashState.ease_timer,
+					180.0f,
+					-180.0f,
+					FlashState.ease_duration,
+					0.25f, /* amplitude */
+					FlashState.ease_duration * 0.35 /* period */
+					);
+
+	FlashState.cam_z = EASE_QuadOut(
+				FlashState.ease_timer,
+				9.2f,
+				0.8f,
+				FlashState.ease_duration
+				);
+}
+
+static void EaseBack() {
+	/* Flip to back of card */
+	FlashState.card_rotation = EASE_ElasticOut(
+					FlashState.ease_timer,
+					0.0f,
+					180.0f,
+					FlashState.ease_duration,
+					0.25f, /* amplitude */
+					FlashState.ease_duration * 0.35 /* period */
+					);
+
+	FlashState.cam_z = EASE_QuadOut(
+				FlashState.ease_timer,
+				10.0f,
+				-0.8f,
+				FlashState.ease_duration
+				);
+}
+
+static void EaseForward() {
+	/* Jerk card to the right */
+	FlashState.card_x_offset = EASE_QuadOut(
+					FlashState.ease_timer,
+					2.0f,
+					-2.0f,
+					FlashState.ease_duration
+					);
+}
+
+static void EaseBackward() {
+	/* Jerk card to the right */
+	FlashState.card_x_offset = EASE_QuadOut(
+					FlashState.ease_timer,
+					-2.0f,
+					2.0f,
+					FlashState.ease_duration
+					);
+}
+
+
 /*
  * Update
  * NOTE: This runs BEFORE BeginDraw(); is called.
@@ -242,13 +311,23 @@ int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
 	}
 
 	if (IsKeyPressed(263) && !FlashState.anim_playing) {
-		PlayAnim(MOVE_BACKWARD, 0.5f, delta_time);
 		AdvanceCards(-1);
+
+		if (!FlashState.view_front) {
+			FlipFrontCombo(FLIP_FRONT_BACKWARD, delta_time);
+		} else {
+			PlayAnim(MOVE_BACKWARD, 0.1f, delta_time);
+		}
 	}
 
 	if (IsKeyPressed(262) && !FlashState.anim_playing) {
-		PlayAnim(MOVE_FORWARD, 0.5f, delta_time);
 		AdvanceCards(1);
+		
+		if (!FlashState.view_front) {
+			FlipFrontCombo(FLIP_FRONT_FORWARD, delta_time);
+		} else {
+			PlayAnim(MOVE_FORWARD, 0.1f, delta_time);
+		}
 	}
 
 	if (FlashState.anim_playing) {
@@ -263,62 +342,24 @@ int FLASHSTATE_Update(struct HlCore *CORE, float delta_time)
 		default:
 			break;
 		case FRONT:
-			/* Flip to front of card */
-			FlashState.card_rotation = EASE_ElasticOut(
-							FlashState.ease_timer,
-							180.0f,
-							-180.0f,
-							FlashState.ease_duration,
-							0.25f, /* amplitude */
-							FlashState.ease_duration * 0.35 /* period */
-							);
-
-			FlashState.cam_z = EASE_QuadOut(
-						FlashState.ease_timer,
-						9.2f,
-						0.8f,
-						FlashState.ease_duration
-						);
+			EaseFront();
 			break;
 		case BACK:
-			/* Flip to back of card */
-			FlashState.card_rotation = EASE_ElasticOut(
-							FlashState.ease_timer,
-							0.0f,
-							180.0f,
-							FlashState.ease_duration,
-							0.25f, /* amplitude */
-							FlashState.ease_duration * 0.35 /* period */
-							);
-
-			FlashState.cam_z = EASE_QuadOut(
-						FlashState.ease_timer,
-						10.0f,
-						-0.8f,
-						FlashState.ease_duration
-						);
+			EaseBack();
 			break;
 		case MOVE_FORWARD:	
-			/* Jerk card to the right */
-			FlashState.card_x_offset = EASE_ElasticOut(
-							FlashState.ease_timer,
-							2.0f,
-							-2.0f,
-							FlashState.ease_duration,
-							0.05f, /* amplitude */
-							FlashState.ease_duration * 0.5 /* period */
-							);
+			EaseForward();
 			break;
 		case MOVE_BACKWARD:
-			/* Jerk card to the right */
-			FlashState.card_x_offset = EASE_ElasticOut(
-							FlashState.ease_timer,
-							-2.0f,
-							2.0f,
-							FlashState.ease_duration,
-							0.05f, /* amplitude */
-							FlashState.ease_duration * 0.5 /* period */
-							);		
+			EaseBackward();
+			break;
+		case FLIP_FRONT_FORWARD:
+			EaseFront();
+			EaseForward();
+			break;
+		case FLIP_FRONT_BACKWARD:
+			EaseFront();
+			EaseBackward();
 			break;
 		}
 	}
@@ -364,6 +405,16 @@ int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 	DrawTextEx(
 		*CORE->GLOBALS->F_VT323,
 		counter,
+		pos,
+		40,
+		0.0f,
+		WHITE
+		);
+
+	pos = (Vector2) { (CORE->canvas_width / 2) - 80.0f, 50.0f };
+	DrawTextEx(
+		*CORE->GLOBALS->F_VT323,
+		"flashcard mode",
 		pos,
 		40,
 		0.0f,

@@ -13,7 +13,7 @@
 #include "GLOBALS.h"
 
 struct Data {
-	int myint;
+	float timer;
 };
 
 struct Data MenuState;
@@ -27,6 +27,9 @@ int MENUSTATE_Init(struct HlCore *CORE, float delta_time)
 {
 	printf("%s", "[MENUSTATE]: Entering MENUSTATE\n");
 
+	
+
+	MenuState.timer = 0.0f;
 	return 0;
 }
 
@@ -52,6 +55,13 @@ int MENUSTATE_DeInit(struct HlCore *CORE, float delta_time)
 int MENUSTATE_Update(struct HlCore *CORE, float delta_time)
 {
 	/* Update values */
+
+	MenuState.timer += delta_time;
+
+	if (MenuState.timer >= 0.1f) {
+		CORE->GLOBALS->CurrentDeck = "test.hdk";
+		HELIUM_ChangeState(CORE, FLASHSTATE);
+	}
 
 	return 0;
 }

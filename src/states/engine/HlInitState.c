@@ -59,8 +59,7 @@ int HLINITSTATE_Update(struct HlCore *CORE, float delta_time)
 	HlInitState.timer += delta_time;	
 
 	if (HlInitState.timer > 1.0) {
-		CORE->GLOBALS->CurrentDeck = "test.hld";
-		HELIUM_ChangeState(CORE, FLASHSTATE);
+		HELIUM_ChangeState(CORE, MENUSTATE);
 	}
 	
 	return 0;
