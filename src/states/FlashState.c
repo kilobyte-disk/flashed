@@ -420,6 +420,16 @@ int FLASHSTATE_Render(struct HlCore *CORE, float delta_time)
 		0.0f,
 		WHITE
 		);
+
+	pos = (Vector2) { 20.0f, 100.0f };
+	DrawTextEx(
+		*CORE->GLOBALS->F_VT323,
+		"exit",
+		pos,
+		40,
+		0.0f,
+		WHITE
+	);
 		
 	return 0;
 }
