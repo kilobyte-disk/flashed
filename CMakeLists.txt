@@ -32,6 +32,7 @@ add_executable(flashed
 	src/instance/HlAnimation.c
 
 	# Util
+	src/util/FSUtil.c
 	src/util/HlEase.c
 	src/util/HlData.c
 	src/util/HlUtils.c

@@ -7,10 +7,15 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <string.h>
+#include <stdlib.h>
 #include "raylib.h"
 
 #include "Helium.h"
 #include "GLOBALS.h"
+#include "FSUtil.h"
 
 struct Data {
 	float timer;
@@ -18,16 +23,15 @@ struct Data {
 
 struct Data MenuState;
 
-
 /*
  * Initialize the state
  */
 
 int MENUSTATE_Init(struct HlCore *CORE, float delta_time)
 {
-	printf("%s", "[MENUSTATE]: Entering MENUSTATE\n");
+	printf("%s", "[MenuState]: Entering MENUSTATE\n");
 
-	
+	FSUTIL_ReadDir("./decks/");
 
 	MenuState.timer = 0.0f;
 	return 0;
@@ -41,7 +45,7 @@ int MENUSTATE_Init(struct HlCore *CORE, float delta_time)
 
 int MENUSTATE_DeInit(struct HlCore *CORE, float delta_time)
 {
-	printf("%s", "[MENUSTATE]: Exiting MENUSTATE\n");
+	printf("%s", "[MenuState]: Exiting MENUSTATE\n");
 
 	return 0;
 }
